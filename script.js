@@ -55,10 +55,13 @@ filterBtns.forEach(btn => {
 });
 
 // ============================================================
-// ASK MANAHIL AI — lightweight FAQ assistant
-// Works fully offline/static (no API key needed).
-// To upgrade to a real Claude-powered assistant, see README.md
-// and swap `getBotReply()` for a call to /api/chat (Vercel function).
+// ASK MANAHIL AI
+// Tries the real Claude-powered endpoint first (/api/chat, only
+// live when deployed on Vercel with ANTHROPIC_API_KEY set).
+// Falls back automatically to the offline FAQ bot below if that
+// endpoint isn't available (local preview, GitHub Pages, Netlify
+// static hosting, or if the API call fails for any reason) — so
+// the widget always works, everywhere.
 // ============================================================
 const KB = {
   greeting: "Hi! I'm Ask Manahil AI 👋 I can tell you about Manahil's projects, skills, experience, resume or how to get in touch. What would you like to know?",
@@ -83,7 +86,7 @@ function getBotReply(msg) {
   if (m.includes('dineease') || m.includes('restaurant')) return KB.projects.dineease;
   if (m.includes('inventory')) return KB.projects.inventory;
   if (m.includes('gallery') || m.includes('art')) return KB.projects.gallery;
-  if (m.includes('pharmacy') || m.includes('medicine')) return KB.projects.event === undefined ? KB.projects.pharmacy : KB.projects.pharmacy;
+  if (m.includes('pharmacy') || m.includes('medicine')) return KB.projects.pharmacy;
   if (m.includes('event')) return KB.projects.event;
   if (m.includes('project')) return KB.projects.general;
   if (m.includes('skill') || m.includes('tech') || m.includes('stack')) return KB.skills;
@@ -113,6 +116,15 @@ function addMsg(text, who) {
   aiBody.scrollTop = aiBody.scrollHeight;
 }
 
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'ai-msg bot ai-typing';
+  div.textContent = '…';
+  aiBody.appendChild(div);
+  aiBody.scrollTop = aiBody.scrollHeight;
+  return div;
+}
+
 aiFab.addEventListener('click', () => {
   aiPanel.classList.add('open');
   if (!aiOpened) {
@@ -127,7 +139,28 @@ function sendMsg(text) {
   if (!text.trim()) return;
   addMsg(text, 'user');
   aiInput.value = '';
-  setTimeout(() => addMsg(getBotReply(text), 'bot'), 350);
+
+  const typingEl = addTyping();
+
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: text })
+  })
+    .then(r => {
+      if (!r.ok) throw new Error('Bad response');
+      return r.json();
+    })
+    .then(data => {
+      typingEl.remove();
+      addMsg(data.reply || getBotReply(text), 'bot');
+    })
+    .catch(() => {
+      // /api/chat isn't live (e.g. static hosting, no API key set,
+      // or a network error) — fall back to the offline FAQ bot.
+      typingEl.remove();
+      setTimeout(() => addMsg(getBotReply(text), 'bot'), 200);
+    });
 }
 
 aiSend.addEventListener('click', () => sendMsg(aiInput.value));

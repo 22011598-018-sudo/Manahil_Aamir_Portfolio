@@ -1,18 +1,11 @@
-// OPTIONAL — Upgrade path from the FAQ-based "Ask Manahil AI" to a real
-// Claude-powered assistant, without exposing your API key in the browser.
-//
-// This file only works if you deploy on Vercel (it auto-detects anything
-// inside /api as a serverless function). It will NOT run if you just open
-// index.html locally or host on plain GitHub Pages / Netlify static hosting
-// (those need a different setup — see README.md).
+// Vercel serverless function — "Ask Manahil AI" powered by the real Claude API.
 //
 // SETUP:
 // 1. On vercel.com, open your project → Settings → Environment Variables
 // 2. Add a variable named ANTHROPIC_API_KEY with your key from
 //    https://console.anthropic.com
 // 3. Redeploy. This endpoint will then be live at /api/chat
-// 4. In script.js, replace the getBotReply() call with a fetch to /api/chat
-//    (see the commented example at the bottom of this file)
+// 4. script.js already calls this endpoint (see sendMsg()).
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -64,7 +57,7 @@ Keep answers short (2-4 sentences), warm, and specific.`;
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-5',
         max_tokens: 400,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: message }]
@@ -81,24 +74,3 @@ Keep answers short (2-4 sentences), warm, and specific.`;
     return res.status(500).json({ error: 'Something went wrong talking to Claude.' });
   }
 }
-
-/* ============================================================
-   HOW TO SWITCH script.js TO USE THIS ENDPOINT:
-
-   Replace the sendMsg() function's bot-reply line:
-
-     setTimeout(() => addMsg(getBotReply(text), 'bot'), 350);
-
-   with:
-
-     fetch('/api/chat', {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ message: text })
-     })
-       .then(r => r.json())
-       .then(data => addMsg(data.reply || getBotReply(text), 'bot'))
-       .catch(() => addMsg(getBotReply(text), 'bot'));
-
-   That's it — no other changes needed.
-   ============================================================ */
