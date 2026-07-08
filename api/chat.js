@@ -64,11 +64,17 @@ Keep answers short (2-4 sentences), warm, and specific.`;
       })
     });
 
-    const data = await response.json();
-    const reply = data?.content?.find(b => b.type === 'text')?.text
-      || "Sorry, I couldn't generate a reply just now.";
+   const data = await response.json();
+console.log('Anthropic API response:', JSON.stringify(data));
 
-    return res.status(200).json({ reply });
+if (!response.ok) {
+  return res.status(500).json({ error: data?.error?.message || 'Claude API error' });
+}
+
+const reply = data?.content?.find(b => b.type === 'text')?.text
+  || "Sorry, I couldn't generate a reply just now.";
+
+return res.status(200).json({ reply });
   } catch (err) {
     console.error('Claude API error:', err);
     return res.status(500).json({ error: 'Something went wrong talking to Claude.' });
